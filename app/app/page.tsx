@@ -1,0 +1,2 @@
+import {redirect} from 'next/navigation';import {identity,AppError} from '../../lib/server';import {safeNext} from '../../lib/navigation';import Workspace from '../../components/workspace';
+export default async function Page({searchParams}:{searchParams:Promise<Record<string,string|undefined>>}){const q=await searchParams;try{await identity();}catch(e){if(e instanceof AppError&&e.status===401)redirect('/login?next='+encodeURIComponent(safeNext(q.invite?'/app?invite='+q.invite:'/app')));throw e;}return <Workspace/>;}

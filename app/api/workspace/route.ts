@@ -1,0 +1,16 @@
+import {createHash,randomBytes} from 'node:crypto';
+import {identity,context,check,failure,origin,AppError} from '../../../lib/server';import {readJSON} from '../../../lib/http';import {uuid,validateBrief} from '../../../lib/domain';
+export async function GET(request:Request){try{const {client,user}=await identity();const memberships=check(await client.from('mm_memberships').select('organization_id,role').eq('user_id',user.id));const ids=(memberships||[]).map(x=>x.organization_id);const organizations=ids.length?check(await client.from('mm_organizations').select('*').in('id',ids).order('created_at')):[];const selected=new URL(request.url).searchParams.get('organization')||organizations?.[0]?.id;
+ if(selected&&!ids.includes(selected))throw new AppError('Family workspace unavailable.',403);
+ if(!selected)return Response.json({organizations:[],memberships:[],user:{id:user.id,email:user.email}},{headers:{'Cache-Control':'no-store'}});
+ const [maids,saved,audit,members,invitations,usage]=await Promise.all([client.from('mm_maids').select('*').eq('available',true).eq('consent',true).order('created_at').limit(1000),client.from('mm_saved').select('*').eq('organization_id',selected),client.from('mm_audit').select('id,event,created_at').eq('organization_id',selected).order('created_at',{ascending:false}).limit(50),client.from('mm_memberships').select('user_id,role').eq('organization_id',selected),client.from('mm_invitations').select('id,email,expires_at,revoked,accepted_at').eq('organization_id',selected).order('created_at',{ascending:false}).limit(30),client.from('mm_ai_usage').select('used').eq('organization_id',selected).eq('day',new Date().toISOString().slice(0,10)).maybeSingle()]);
+ return Response.json({organizations,memberships,selected,maids:check(maids),saved:check(saved),audit:check(audit),members:check(members),invitations:check(invitations),usage:check(usage)?.used||0,user:{id:user.id,email:user.email}},{headers:{'Cache-Control':'no-store'}});
+ }catch(e){return failure(e);}}
+export async function POST(request:Request){try{origin(request);const m=await readJSON(request,16000);const {client}=await identity();if(typeof m.action!=='string')throw new AppError('Choose an action.');
+ const actions=['create','brief','save','update','delete','invite','accept','revoke','remove'];if(!actions.includes(m.action))throw new AppError('Unknown action.');
+ if(!['create','accept'].includes(m.action)){if(!uuid(m.organization))throw new AppError('Invalid family workspace.');await context(m.organization,['invite','revoke','remove'].includes(m.action));}
+ if(m.action==='brief'){try{m.brief=validateBrief(m.brief);}catch(e){throw new AppError((e as Error).message);}}
+ let token:string|undefined;if(m.action==='invite'){token=randomBytes(32).toString('hex');m.token_hash=createHash('sha256').update(token).digest('hex');}
+ if(m.action==='accept'){if(typeof m.token!=='string'||!/^[a-f0-9]{64}$/.test(m.token))throw new AppError('Invalid invitation.');m.token_hash=createHash('sha256').update(m.token).digest('hex');delete m.token;}
+ const result=check(await client.rpc('mm_mutate',{m}));return Response.json({...result,...(token?{token}:{} )},{headers:{'Cache-Control':'no-store'}});
+ }catch(e){return failure(e);}}

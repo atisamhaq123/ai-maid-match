@@ -1,0 +1,1 @@
+'use client';export default function ErrorPage({reset}:{reset:()=>void}){return <main className="center"><h1>A little interruption.</h1><p>We could not load this page. Your saved household information is safe.</p><button onClick={reset}>Try again</button><a href="/">Back home</a></main>;}

@@ -1,0 +1,10 @@
+import type Stripe from 'stripe';import {admin,check,env,AppError,failure} from '../../../../lib/server';import {stripe,reconcile,withBillingLock} from '../../../../lib/billing';
+export const runtime='nodejs';export const maxDuration=60;
+export async function POST(request:Request){try{const client=stripe();let event:Stripe.Event;const secret=env('STRIPE_WEBHOOK_SECRET');try{const length=Number(request.headers.get('content-length')||0);if(length>1000000)return Response.json({error:'Event too large'},{status:413});event=client.webhooks.constructEvent(await request.text(),request.headers.get('stripe-signature')||'',secret);}catch{return Response.json({error:'Invalid Stripe signature.'},{status:400});}
+ if(!['checkout.session.completed','customer.subscription.created','customer.subscription.updated','customer.subscription.deleted','invoice.paid','invoice.payment_failed'].includes(event.type))return Response.json({received:true});
+ if(check(await admin().from('mm_stripe_events').select('id').eq('id',event.id).maybeSingle()))return Response.json({received:true});
+ const object=event.data.object as unknown as {customer?:string|{id:string};metadata?:Record<string,string>};const customer=typeof object.customer==='string'?object.customer:object.customer?.id;if(!customer)throw new AppError('Missing Stripe customer.',400);
+ const o=check(await admin().from('mm_organizations').select('id').eq('stripe_customer_id',customer).maybeSingle());
+ if(!o){const c=await client.customers.retrieve(customer);if(!c.deleted&&c.metadata.application!=='maid-match')return Response.json({received:true,ignored:'other application'});throw new AppError('Maid-Match customer mapping is not ready. Retry this event.',503);}
+ await withBillingLock(o.id,async(org,lease)=>{if(check(await admin().from('mm_stripe_events').select('id').eq('id',event.id).maybeSingle()))return;const sub=await reconcile(client,org,lease,event.id);if(!sub)throw new AppError('Subscription is not available yet. Retry this event.',503);});return Response.json({received:true});
+ }catch(e){return failure(e instanceof AppError?e:new AppError('Billing reconciliation failed. Retry this event.',503));}}
