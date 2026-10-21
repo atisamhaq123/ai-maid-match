@@ -1,6 +1,6 @@
 import 'server-only';
 import {createServerClient} from '@supabase/ssr';
-import {createClient} from '@supabase/supabase-js';
+import {createClient,isAuthRetryableFetchError} from '@supabase/supabase-js';
 import {cookies} from 'next/headers';
 import {HttpError} from './http';import {allowedOrigin} from './origin';
 export class AppError extends HttpError{}
@@ -9,7 +9,7 @@ const boundedFetch:typeof fetch=(input,options:RequestInit={})=>fetch(input,{...
 export async function db(){
  const jar=await cookies();return createServerClient(env('NEXT_PUBLIC_SUPABASE_URL'),env('NEXT_PUBLIC_SUPABASE_ANON_KEY'),{cookieOptions:{name:'maid-match-auth'},global:{fetch:boundedFetch},cookies:{getAll:()=>jar.getAll(),setAll:values=>{try{for(const {name,value,options} of values)jar.set(name,value,options);}catch{/* Server components rely on the proxy for refreshed cookies. */}}}});
 }
-export async function identity(){const client=await db();const {data:{user},error}=await client.auth.getUser();if(error&&error.status&&error.status>=500)throw new AppError('Authentication is temporarily unavailable. Please retry.',503);if(error||!user||!user.email_confirmed_at)throw new AppError('Your session expired. Sign in with a verified email address.',401);return {client,user};}
+export async function identity(){const client=await db();const {data:{user},error}=await client.auth.getUser();if(error&&(isAuthRetryableFetchError(error)||error.status===429||(error.status!==undefined&&error.status>=500)))throw new AppError('Authentication is temporarily unavailable. Please retry.',503);if(error||!user||!user.email_confirmed_at)throw new AppError('Your session expired. Sign in with a verified email address.',401);return {client,user};}
 export function admin(){return createClient(env('NEXT_PUBLIC_SUPABASE_URL'),env('SUPABASE_SERVICE_ROLE_KEY'),{global:{fetch:boundedFetch},auth:{persistSession:false,autoRefreshToken:false}});}
 export async function context(id:string,owner=false){const {client,user}=await identity();const {data:membership,error}=await client.from('mm_memberships').select('role').eq('organization_id',id).eq('user_id',user.id).maybeSingle();if(error)check({data:null,error});if(!membership||owner&&membership.role!=='owner')throw new AppError(owner?'Only the organization owner can do this.':'You no longer have access to this organization.',403);return {client,user,role:membership.role};}
 export function origin(request:Request){if(!allowedOrigin(request.headers.get('origin'),env('NEXT_PUBLIC_APP_URL'),process.env.NODE_ENV==='development'))throw new AppError('Request origin rejected.',403);}

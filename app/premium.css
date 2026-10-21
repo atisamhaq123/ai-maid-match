@@ -91,3 +91,32 @@ select:focus-visible, textarea:focus-visible { outline-color: var(--coral); }
   border-color: #ffc0a555;
   background: #321d2e99;
 }
+/* Scroll navigation independently while keeping account actions on screen. */
+.sidebar { overflow: hidden; height: 100dvh; }
+.sidebar-scroll {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #a0748e #211723;
+}
+.sidebar-scroll > * { flex-shrink: 0; }
+.sidebar-scroll .sidebar-bottom { padding-top: 24px; }
+.sidebar > .user-row {
+  display: grid;
+  grid-template-columns: 35px minmax(0, 1fr);
+  flex-shrink: 0;
+  gap: 9px;
+  padding: 14px 0;
+  background: #160f1b;
+}
+.sidebar-logout {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 12px;
+  font-size: 12px;
+}
