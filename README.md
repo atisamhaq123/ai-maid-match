@@ -23,7 +23,7 @@ The copied `.env.local` uses the same service credentials and variable names as 
 - Email-bound invitation links, revocation and member removal. Links are shared by the owner; the app does not send invitation emails.
 - Household location, pay budget/currency, service needs, working days, daily hours, living arrangement, start date and communication languages.
 - Consent-based maid directory; saved matches; explicit reasons and gaps for requirement coverage.
-- Optional OpenAI explanations and interview questions. Requirement scores are deterministic and never produced by the model.
+- AI family assistant with model-generated shortlist scores, explanations, interview questions, and an animated loader.
 - Family interview planner, private notes, arrangement status, local timezone display and activity history. Scheduling is a private planning record, not a confirmed appointment or a notification to a maid.
 - Starter and Pro organization subscriptions, a 14-day Starter trial, signed webhooks, serialized billing operations, direct Stripe reconciliation and plan changes in Billing Portal.
 - Accessible native dialogs, mobile navigation, filters, empty states and errors.
@@ -31,17 +31,21 @@ The copied `.env.local` uses the same service credentials and variable names as 
 
 ## Role of AI
 
-AI helps families understand their maid matches. It:
+The AI family assistant generates a shortlist of up to five relevant profiles and its own 0-100 suitability score for each. Families can add work-related priorities such as cooking, budget, or weekday availability. Each recommendation includes reasons, gaps to discuss, interview questions, and actions to view or save the profile.
 
-- Explains how matches align with the household's saved requirements.
-- Highlights differences in budget, skills, and schedule.
-- Suggests useful interview questions so families can discuss suitability directly.
+Scores shown as **AI fit** come from the configured OpenAI model. The server validates scores and IDs but does not calculate replacement scores or silently substitute fixed percentages. Cards without a current AI assessment say **Ask AI to score**. After assessment, the directory sorts scored profiles by the model's score. Changing the household requirements or family workspace clears those assessments.
 
-The match percentage is calculated by fixed rules using household requirements and maid profile data. AI adds an explanation; it does not generate the score or make hiring decisions. Families make the final decision.
+The existing deterministic matching function only retrieves a bounded review pool and supplies a default discovery order. It is not presented as an AI score. For a large catalog, up to 60 relevant available profiles are submitted from the first 1,000 directory records; the assistant displays the number reviewed. Rule-based scores are never sent to the model.
 
-AI provides advice only. It does not verify profiles, check references, contact maids, or arrange interviews. Families should confirm profile information and availability directly.
+Live matching shares saved household requirements, the family's assistant request, and work-related profile facts with `https://api.openai.com/v1/chat/completions`, using `OPENAI_API_KEY` and `OPENAI_CHAT_MODEL`. Names, profile photos, biographies, contact details, and private saved-match notes are excluded from the structured profile payload. Use the assistant request for household tasks and work-related priorities rather than contact details. This data flow was explicitly approved by the project owner.
 
-The demo displays clearly labeled sample insights without calling OpenAI. Live insights use `OPENAI_API_KEY` and `OPENAI_CHAT_MODEL`, require saved household requirements and available consented maid profiles, and count toward the family's daily AI allowance.
+The endpoint requires authenticated family membership, a valid saved household brief, and a current trial/subscription. It reserves the existing daily AI allowance before calling the provider. Invalid profile IDs, duplicate recommendations, invalid scores, incomplete/refused responses, expired requests, changed household versions, and withdrawn profiles are rejected. Failures show an error and do not fabricate an AI result. Each request uses one daily AI attempt, including a failed provider attempt.
+
+AI scores are subjective compatibility estimates, not verified ratings, hiring decisions, or guarantees. The assistant uses work-related evidence, not identity, appearance, or protected traits. Families make the final decision and verify information directly. It does not verify references, contact maids, or confirm appointments.
+
+The animated loading state runs only during the request, without a fake percentage, and supports reduced-motion preferences. The demo shows a clearly labeled, fixed example shortlist with example scores and makes no OpenAI request. Live model scores are generated anew and may vary between requests. Results are session-only, not persisted to the database. No schema migration is needed for the assistant.
+
+Implementation follows [OpenAI's Structured Outputs guidance](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=chat).
 
 ## Supabase setup
 

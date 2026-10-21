@@ -80,3 +80,13 @@ Public launch is blocked by cloud setup: the new database schema is not installe
 - `npm.cmd run check:production` (intentionally fails until launch setup is complete)
 
 Screenshots: `artifacts/landing-desktop.png`, `artifacts/workspace-desktop.png`, `artifacts/signup-desktop.png`, `artifacts/landing-mobile.png`, `artifacts/demo-mobile.png`, `artifacts/login-mobile.png`.
+
+## AI assistant update: 2026-10-21
+
+The assistant now generates its own profile scores and shortlist, replacing the former explanation-only flow. Earlier references above to deterministic displayed scores describe the previous implementation. The project owner explicitly approved sending saved household requirements and work-related maid fields to OpenAI, excluding names, photos, contacts, and private notes.
+
+Validation added: anonymized/bounded model context, exact preservation of model-generated scores, unknown/duplicate profile rejection, invalid score bounds/types, withdrawn profiles, malformed responses and valid empty shortlists. The full automated suite now has 40 passing tests, and the production build passes.
+
+One live provider smoke check used three anonymized synthetic profiles, produced two recommendations with model-generated scores of 96 and 61, and passed schema/ID validation. This was a direct provider check; it does not replace hosted authenticated-tenant and quota acceptance testing. Existing earlier statements that no AI requests were made apply to the original audit only. No live family data was used in this smoke check.
+
+The endpoint rechecks household version and profile availability after model completion. Results are session-only and reset with household/workspace changes. The loader supports reduced motion. Demo scores are explicitly example values, not live provider scores. Server provider failures never fall back to fabricated AI scores.
