@@ -1,7 +1,7 @@
 export const SKILLS=['Cleaning','Cooking','Laundry','Childcare','Elderly assistance','Pet care'] as const;
 export const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] as const;
 export type Brief={location:string;budget:number;currency:'USD'|'PKR'|'AED';schedule:string[];skills:string[];hours:number;arrangement:'live-out'|'live-in';startDate:string;householdSize:number;languages:string[]};
-export type Maid={id:string;name:string;location:string;rate:number;currency:string;skills:string[];languages:string[];days:string[];hours:number;arrangement:string;experience:number;bio:string;available:boolean;consent:boolean};
+export type Maid={photo_url?:string|null;id:string;name:string;location:string;rate:number;currency:string;skills:string[];languages:string[];days:string[];hours:number;arrangement:string;experience:number;bio:string;available:boolean;consent:boolean};
 export type Saved={maid_id:string;status:'saved'|'interview'|'hired'|'closed';interview_at:string|null;note:string;version:number};
 export type Organization={id:string;name:string;brief:Brief;version:number;plan:'starter'|'pro';subscription_status:string;trial_end:string;period_end:string|null;cancel_at_period_end:boolean;stripe_subscription_id:string|null};
 export type Match={id:string;score:number;reasons:string[];gaps:string[]};

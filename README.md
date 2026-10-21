@@ -57,6 +57,10 @@ The app intentionally has no recruitment/candidate management section or maid si
 
 Withdrawing a profile or marking it unavailable removes it from discovery and AI inputs. Saved family records can still be removed without exposing withdrawn directory details. Use a documented operational process to confirm consent, update availability, verify references, handle profile removal and delete tenant data on request. Family data is not sent to other families.
 
+## Optional sample maid profiles
+
+For development/testing, run `supabase/optional-migrations/002_sample_maid_profiles.sql` in the Supabase SQL Editor after the main setup migration, then refresh the dashboard. It adds six clearly labeled fictional profiles to the database directory, visible to all families with a workspace. It is safe to rerun and does not overwrite existing records. Keep it out of production; the publication flags are for synthetic test data and do not establish consent for real people.
+
 ## Plans and entitlements
 
 | Limit | Starter | Pro |
@@ -119,3 +123,9 @@ npm.cmd run check:production
 ```
 
 Browser checks use installed Chrome at its standard Windows path; override with `CHROME_PATH`. `TEST_URL` overrides the browser base URL. The readiness check uses read-only service requests, prints no secret values, and exits nonzero while cloud setup remains incomplete. See `AUDIT.md` for evidence, remaining limitations and release checks.
+
+## Dummy maid data with pictures
+
+Run `supabase/migrations/004_dummy_maids_with_stock_photos.sql` in the Supabase SQL Editor after `001_maid_match.sql`, then refresh the dashboard. Migration 002 is optional: 004 inserts all six fictional profiles or adds pictures to existing marked samples. Rerunning does not duplicate profiles or overwrite real profiles. Portraits are stock photos of women from Pexels, stored as local JPEGs under `public/maids`, served by the app; no Supabase Storage setup is required. Profile cards and details display the pictures, with initials if an image cannot load. This is synthetic development/test data visible to every family workspace, not real people available for hire.
+
+The illustrated-profile migration `003_dummy_maids_with_pictures.sql` was removed. Run `004_dummy_maids_with_stock_photos.sql` even if you previously applied 003: it adds the photo column if needed, inserts missing fictional profiles and updates marked sample profiles to the JPEG paths. It does not remove any database rows. Older sample SVG URLs are mapped to the replacement photos in the UI. Model photographs are placeholders, not the named fictional people or endorsements. Photo credits and source links are in `public/maids/SOURCES.md`.
