@@ -1,1 +1,2 @@
-import AuthForm from '../../components/auth-form';export default function Page(){return <AuthForm mode="signup"/>;}
+import GuestAuth from '../../components/guest-auth';
+export default function Page({searchParams}:{searchParams:Promise<Record<string,string|string[]|undefined>>}){return <GuestAuth mode="signup" searchParams={searchParams}/>;}
